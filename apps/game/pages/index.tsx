@@ -209,8 +209,13 @@ export default function Game() {
     },
   };
   const timerAnimationVariants = {
+    wait: {
+      pathLength: 1,
+      stroke: '#00ff40',
+    },
     complete: {
       pathLength: 0,
+      stroke: '#ff0000',
       transition: {
         duration: difficultyTimer,
       },
@@ -226,6 +231,7 @@ export default function Game() {
     setPlayerTop(bindingRect.top);
     setPlayerAnimation('move');
     setPlayerHeight(25);
+    setTimerAnimation('wait');
   }
 
   function playerAnimationCycle() {
@@ -275,7 +281,7 @@ export default function Game() {
     <GameScreen>
       <Timer>
         <motion.circle
-          initial={{ pathLength: 1 }}
+          initial={{ pathLength: 1, stroke: '#00ff40' }}
           variants={timerAnimationVariants}
           animate={timerAnimation}
           onAnimationComplete={() => timerAnimationCycle()}
@@ -284,7 +290,6 @@ export default function Game() {
           r={100}
           fill="transparent"
           strokeWidth={15}
-          stroke="#cc0000"
         />
       </Timer>
       <Player
