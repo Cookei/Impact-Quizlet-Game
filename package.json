@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "node_modules/turbo/bin/turbo run build",
-    "dev": "node_modules/turbo/bin/turbo run dev --parallel",
-    "lint": "node_modules/turbo/bin/turbo run lint"
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint"
   },
   "dependencies": {
     "@types/node": "18.15.5",
