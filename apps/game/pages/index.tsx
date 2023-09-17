@@ -64,6 +64,7 @@ const Answer = styled(motion.button)<{ $imgOpacity?; $correct; $reveal; $fontSiz
   display: flex;
   justify-content: center;
   align-items: center;
+  visibility: 'visible';
   & img {
     object-fit: cover;
     width: 100%;
@@ -130,6 +131,7 @@ export default function Game() {
   const { fontSize, ref } = useFitText({ minFontSize: 5 });
   const [timerAnimation, setTimerAnimation] = useState('initial');
   const [difficultyTimer, setDifficultyTimer] = useState(7);
+  const [clickedIndex, setClickedIndex] = useState(null);
   // #endregion
 
   function generateAnswers(set: Dataset, n: number) {
@@ -219,6 +221,7 @@ export default function Game() {
     setReveal(true);
     if (correct) setScore(score + 100);
     else setLives(lives - 1);
+    setClickedIndex(i);
     const bindingRect = document.getElementById(`card-${i}`).getBoundingClientRect();
     setPlayerTop(bindingRect.top);
     setPlayerAnimation('move');
@@ -227,17 +230,26 @@ export default function Game() {
 
   function playerAnimationCycle() {
     if (playerAnimation == 'move') setPlayerAnimation('attack');
-    if (playerAnimation == 'attack') setPlayerAnimation('retreat');
+    if (playerAnimation == 'attack') {
+      document.getElementById(`card-${clickedIndex}`).style.setProperty('visibility', 'hidden');
+      setPlayerAnimation('retreat');
+    }
     if (playerAnimation == 'retreat') {
       setPlayerAnimation('initial');
       setPlayerHeight(50);
+      setStage(stage + 1);
     }
   }
 
   function enemyAnimationCycle() {
-    if (enemyAnimation == 'initial') setEnemyAnimation('enter');
+    if (enemyAnimation == 'initial') {
+      setEnemyAnimation('enter');
+      setTimerAnimation('complete');
+    }
     if (enemyAnimation == 'attack') {
       setTimerAnimation('initial');
+      setLives(lives - 1);
+      reset();
     }
   }
 
@@ -248,10 +260,16 @@ export default function Game() {
     }
   }
 
-  useEffect(() => {
+  function reset() {
     setAnswers(generateAnswers(quizletSet, 4));
-    setTimerAnimation('complete');
-  }, []);
+    setReveal(false);
+    setEnemyAnimation('initial');
+  }
+
+  useEffect(() => {
+    setTimerAnimation('initial');
+    reset();
+  }, [stage]);
 
   return (
     <GameScreen>
