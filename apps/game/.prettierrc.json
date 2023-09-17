@@ -14,7 +14,8 @@
       "files": ["*.ts", "*.tsx"],
       "options": {
         "arrowParens": "avoid",
-        "parser": "typescript"
+        "parser": "typescript",
+        "printWidth": 120
       }
     }
   ]

@@ -12,16 +12,20 @@ import {
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
+import useFitText from 'use-fit-text';
 
-const IMAGE_HEIGHT = 300;
-const IMAGE_WIDTH = 500;
+const UI_HEIGHT = 50;
 
+// #region CSS
 const UI = styled.div`
   position: absolute;
   width: 100%;
-  height: 50px;
+  height: ${UI_HEIGHT}px;
   background-color: green;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const GameScreen = styled.div`
@@ -34,23 +38,26 @@ const GameScreen = styled.div`
   overflow: hidden;
 `;
 
-const AnswerRow = styled.div`
+const AnswerRow = styled(motion.div)`
   position: absolute;
-  height: 100%;
+  height: calc(100% - ${UI_HEIGHT}px);
+  top: ${UI_HEIGHT}px;
   width: 300px;
-  right: 0;
+  left: 100vw;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
   align-items: center;
 `;
 
-const Answer = styled.button<{ $imgOpacity?; $correct; $reveal }>`
+const ANSWER_HEIGHT = 23;
+
+const Answer = styled(motion.button)<{ $imgOpacity?; $correct; $reveal; $fontSize }>`
   position: relative;
-  height: 23%;
+  height: ${ANSWER_HEIGHT}%;
   margin: 10px;
   width: 100%;
-  background-color: gray;
+  background-color: #c0d7e094;
   border: none;
   border-radius: 10px;
   overflow: hidden;
@@ -68,6 +75,7 @@ const Answer = styled.button<{ $imgOpacity?; $correct; $reveal }>`
     opacity: ${props => props.$imgOpacity};
   }
   & h3 {
+    padding: 10px;
     position: absolute;
   }
   & div {
@@ -75,37 +83,54 @@ const Answer = styled.button<{ $imgOpacity?; $correct; $reveal }>`
     width: 100%;
     height: 100%;
     opacity: 0.5;
-    background-color: ${props =>
-      props.$reveal ? (props.$correct ? 'green' : 'red') : 'gray'};
+    background-color: ${props => (props.$reveal ? (props.$correct ? 'green' : 'red') : '')};
   }
 `;
 
-const Player = styled.div`
+const PLAYER_INIT_HEIGHT = 50;
+const PLAYER_WIDTH = 100;
+const PLAYER_INIT_LEFT = 70;
+
+const Player = styled(motion.div)<{ $playerTop; $playerHeight }>`
   position: absolute;
   height: 0;
   width: 0;
-  border-top: 50px solid transparent;
-  border-bottom: 50px solid transparent;
-  border-left: 100px solid blue;
-  top: 50px;
+  left: ${PLAYER_INIT_LEFT}px;
+  top: ${`calc(50% - ${PLAYER_INIT_HEIGHT}px)`};
+  border-top: ${props => props.$playerHeight}px solid transparent;
+  border-bottom: ${props => props.$playerHeight}px solid transparent;
+  border-left: ${PLAYER_WIDTH}px solid blue;
 `;
 
-const TermToolbox = styled.div`
+const Timer = styled(motion.svg)`
   position: absolute;
-  width: 100px;
-  height: 100px;
-  background-color: yellow;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 `;
+
+// #endregion
 
 export default function Game() {
   const quizletSet = Quizlet.getRandomSet();
 
+  // #region ReactHooks
   const [answers, setAnswers] = useState(null);
   const [term, setTerm] = useState(null);
   const [reveal, setReveal] = useState(false);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [stage, setStage] = useState(0);
+  const [playerTop, setPlayerTop] = useState(0);
+  const [playerAnimation, setPlayerAnimation] = useState('initial');
+  const [playerHeight, setPlayerHeight] = useState(50);
+  const [enemyAnimation, setEnemyAnimation] = useState('initial');
+  const { fontSize, ref } = useFitText({ minFontSize: 5 });
+  const [timerAnimation, setTimerAnimation] = useState('initial');
+  const [difficultyTimer, setDifficultyTimer] = useState(7);
+  // #endregion
 
   function generateAnswers(set: Dataset, n: number) {
     const suitableItems = set.studiableItem;
@@ -138,51 +163,155 @@ export default function Game() {
     }
     return output;
   }
+  const playerAnimationVariants = {
+    move: {
+      top: `${playerTop + ANSWER_HEIGHT / 2 + playerHeight}px`,
+    },
+    attack: {
+      left: `80vw`,
+      top: `${playerTop + ANSWER_HEIGHT / 2 + playerHeight}px`,
+      transition: {
+        duration: 0.8,
+        ease: 'anticipate',
+        type: 'tween',
+      },
+    },
+    retreat: {
+      left: `${PLAYER_INIT_LEFT}px`,
+      top: `${playerTop + ANSWER_HEIGHT / 2}px`,
+    },
+    initial: {
+      left: `${PLAYER_INIT_LEFT}px`,
+      top: `calc(50% - ${PLAYER_INIT_HEIGHT}px)`,
+    },
+  };
+  const answerRowAnimationVariants = {
+    initial: {
+      left: `100vw`,
+    },
+    enter: {
+      left: `70vw`,
+      transition: {
+        duration: 2,
+        ease: 'circOut',
+        type: 'tween',
+      },
+    },
+    attack: {
+      left: `-50vw`,
+      transition: {
+        duration: 0.8,
+        ease: 'circIn',
+        type: 'tween',
+      },
+    },
+  };
+  const timerAnimationVariants = {
+    complete: {
+      pathLength: 0,
+      transition: {
+        duration: difficultyTimer,
+      },
+    },
+  };
 
-  function click(correct) {
+  function click(correct, i) {
     setReveal(true);
     if (correct) setScore(score + 100);
     else setLives(lives - 1);
+    const bindingRect = document.getElementById(`card-${i}`).getBoundingClientRect();
+    setPlayerTop(bindingRect.top);
+    setPlayerAnimation('move');
+    setPlayerHeight(25);
+  }
+
+  function playerAnimationCycle() {
+    if (playerAnimation == 'move') setPlayerAnimation('attack');
+    if (playerAnimation == 'attack') setPlayerAnimation('retreat');
+    if (playerAnimation == 'retreat') {
+      setPlayerAnimation('initial');
+      setPlayerHeight(50);
+    }
+  }
+
+  function enemyAnimationCycle() {
+    if (enemyAnimation == 'initial') setEnemyAnimation('enter');
+    if (enemyAnimation == 'attack') {
+      setTimerAnimation('initial');
+    }
+  }
+
+  function timerAnimationCycle() {
+    if (timerAnimation == 'complete') {
+      setReveal(true);
+      setEnemyAnimation('attack');
+    }
   }
 
   useEffect(() => {
     setAnswers(generateAnswers(quizletSet, 4));
+    setTimerAnimation('complete');
   }, []);
 
   return (
     <GameScreen>
-      <UI>
-        {`lives: ${lives}
-      score: ${score}
-      stage: ${stage}`}
-      </UI>
-      <Player>
-        <TermToolbox></TermToolbox>
-      </Player>
-      <AnswerRow>
+      <Timer>
+        <motion.circle
+          initial={{ pathLength: 1 }}
+          variants={timerAnimationVariants}
+          animate={timerAnimation}
+          onAnimationComplete={() => timerAnimationCycle()}
+          cx={`50%`}
+          cy={`50%`}
+          r={100}
+          fill="transparent"
+          strokeWidth={15}
+          stroke="#cc0000"
+        />
+      </Timer>
+      <Player
+        $playerTop={playerTop}
+        $playerHeight={playerHeight}
+        variants={playerAnimationVariants}
+        animate={playerAnimation}
+        onAnimationComplete={() => playerAnimationCycle()}
+      />
+      <AnswerRow
+        variants={answerRowAnimationVariants}
+        animate={enemyAnimation}
+        onAnimationComplete={enemyAnimationCycle}
+      >
         {answers != null
           ? answers.map((e, i) => {
               if (e.media != null) {
                 return e.plainText != '' ? (
                   <Answer
+                    layout
                     key={e.key}
-                    id={i}
-                    onClick={() => !reveal && click(e.correct)}
+                    id={`card-${i}`}
+                    onClick={() => !reveal && click(e.correct, i)}
                     $imgOpacity={0.3}
                     $correct={e.correct}
                     $reveal={reveal}
+                    $fontSize={fontSize}
+                    whileHover={{ scale: reveal ? 1 : 1.04 }}
+                    whileTap={{ scale: reveal ? 1 : 0.96 }}
                   >
                     <img src={e.media}></img>
-                    <h3>{e.plainText}</h3>
+                    <h3 ref={ref}>{e.plainText}</h3>
                     <div />
                   </Answer>
                 ) : (
                   <Answer
+                    layout
                     key={e.key}
-                    id={i}
-                    onClick={() => !reveal && click(e.correct)}
+                    id={`card-${i}`}
+                    onClick={() => !reveal && click(e.correct, i)}
                     $correct={e.correct}
                     $reveal={reveal}
+                    $fontSize={fontSize}
+                    whileHover={{ scale: reveal ? 1 : 1.04 }}
+                    whileTap={{ scale: reveal ? 1 : 0.96 }}
                   >
                     <img src={e.media}></img>
                     <div />
@@ -191,13 +320,17 @@ export default function Game() {
               } else {
                 return (
                   <Answer
+                    layout
                     key={e.key}
-                    id={i}
-                    onClick={() => !reveal && click(e.correct)}
+                    id={`card-${i}`}
+                    onClick={() => !reveal && click(e.correct, i)}
                     $correct={e.correct}
                     $reveal={reveal}
+                    $fontSize={fontSize}
+                    whileHover={{ scale: reveal ? 1 : 1.04 }}
+                    whileTap={{ scale: reveal ? 1 : 0.96 }}
                   >
-                    <h3>{e.plainText}</h3>
+                    <h3 ref={ref}>{e.plainText}</h3>
                     <div />
                   </Answer>
                 );
@@ -205,6 +338,11 @@ export default function Game() {
             })
           : null}
       </AnswerRow>
+      <UI>
+        <div>{`lives: ${lives}`}</div>
+        <h1>{term}</h1>
+        <div>{`score: ${score}`}</div>
+      </UI>
     </GameScreen>
   );
 }

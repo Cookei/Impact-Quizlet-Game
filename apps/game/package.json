@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "dataset": "*",
+    "framer-motion": "^10.16.4",
     "next": "latest",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "styled-components": "^6.0.8"
+    "styled-components": "^6.0.8",
+    "use-fit-text": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.12",
