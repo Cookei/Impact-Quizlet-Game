@@ -536,6 +536,7 @@ export default function Game() {
     setOfferedPowerUps(finalPowerUps);
   }
   function evaluatePowerUp(powerUp: string) {
+    setStage(stage + 1);
     if (difficultyTimer >= 1) {
       setDifficultyTimer(difficultyTimer - 1);
     }
